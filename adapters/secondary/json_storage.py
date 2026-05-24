@@ -1,0 +1,2 @@
+class JsonStorageAdapter:
+    pass
