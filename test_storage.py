@@ -1,16 +1,19 @@
 import unittest
 import os
 import sys
+import tempfile
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
 
 from domain.models.ticket import Ticket, Status, Priority
 from adapters.secondary.json_storage import JsonStorageAdapter
 
+TMP_DIR = tempfile.gettempdir()
+
 
 class TestJsonStorageNormalFlow(unittest.TestCase):
 
     def setUp(self):
-        self.test_file = "/tmp/test_tickets.json"
+        self.test_file = os.path.join(TMP_DIR, "test_tickets.json")
         self.storage = JsonStorageAdapter(filepath=self.test_file)
 
     def tearDown(self):
@@ -64,7 +67,7 @@ class TestJsonStorageNormalFlow(unittest.TestCase):
 class TestJsonStorageFilters(unittest.TestCase):
 
     def setUp(self):
-        self.test_file = "/tmp/test_tickets_filter.json"
+        self.test_file = os.path.join(TMP_DIR, "test_tickets_filter.json")
         self.storage = JsonStorageAdapter(filepath=self.test_file)
         self.storage.save(Ticket(title="Bug A", description="d", status=Status.OPEN,        priority=Priority.HIGH, tags=["api"]))
         self.storage.save(Ticket(title="Bug B", description="d", status=Status.DONE,        priority=Priority.LOW,  tags=["ui"]))
@@ -91,7 +94,7 @@ class TestJsonStorageFilters(unittest.TestCase):
 class TestJsonStorageErrorCases(unittest.TestCase):
 
     def setUp(self):
-        self.test_file = "/tmp/test_tickets_error.json"
+        self.test_file = os.path.join(TMP_DIR, "test_tickets_errors.json")
         self.storage = JsonStorageAdapter(filepath=self.test_file)
 
     def tearDown(self):
@@ -99,7 +102,7 @@ class TestJsonStorageErrorCases(unittest.TestCase):
             os.remove(self.test_file)
 
     def test_find_by_id_raises_error_when_not_found(self):
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ValueError):
             self.storage.find_by_id("nonexistent-id")
 
     def test_update_raises_error_when_ticket_not_found(self):
