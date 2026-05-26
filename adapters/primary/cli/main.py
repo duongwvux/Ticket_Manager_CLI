@@ -7,10 +7,17 @@ import click
 from domain.models.ticket import Ticket, Status, Priority
 from adapters.secondary.json_storage import JsonStorageAdapter
 
+STATUS_CHOICES   = [s.value for s in Status]
+PRIORITY_CHOICES = [p.value for p in Priority]
+
 def get_storage() -> JsonStorageAdapter:
     filepath = os.environ.get("TICKETS_FILE", "tickets.json")
     storage = JsonStorageAdapter(filepath)
     return storage
+
+def handle_error(message: str) -> None:
+    click.echo(f"Error: {message}")
+    sys.exit(1)
 
 @click.group()
 def cli():
@@ -20,7 +27,7 @@ def cli():
 @cli.command()
 @click.option("--title", required=True, help="Ticket title")
 @click.option("--description", required=True, help="Ticket description")
-@click.option("--priority", default="medium", type=click.Choice(["low", "medium", "high", "critical"]))
+@click.option("--priority", default="medium", type=click.Choice(PRIORITY_CHOICES))
 @click.option("--tags", default="", help="Comma-seperated tags")
 def create(title: str, description: str, priority: str, tags: str):
     """Create a new ticket"""
@@ -31,12 +38,11 @@ def create(title: str, description: str, priority: str, tags: str):
         click.echo("Ticket created")
         click.echo(f"Ticket ID: {ticket.id}")
     except ValueError as e:
-        click.echo(f"Error: {e}")
-        sys.exit(1)
+        handle_error(e)
 
 @cli.command(name='list')
-@click.option("--status", default=None, type=click.Choice(["open", "closed","in_progress","canceled"]))
-@click.option("--priority", default=None, type=click.Choice(["low", "medium", "high", "critical"]))
+@click.option("--status", default=None, type=click.Choice(STATUS_CHOICES))
+@click.option("--priority", default=None, type=click.Choice(PRIORITY_CHOICES))
 @click.option("--tag", default=None)
 def list_tickets(status: str, priority: str, tag: str):
     """List all tickets"""
@@ -64,9 +70,8 @@ def show(ticket_id):
         click.echo(f"Priority: {t.priority.value}")
         click.echo(f"Tags: {', '.join(t.tags)}")
         click.echo(f"Created at: {t.created_at}")
-    except KeyError as e:
-        click.echo(f"Error: not found {e}")
-        sys.exit(1)
+    except KeyError:
+        handle_error(f"ticket '{ticket_id}' not found")
 
 @cli.command()
 @click.argument("ticket_id", type=str)
@@ -80,9 +85,7 @@ def update(ticket_id, status):
         storage.update(ticket)
         click.echo(f"Ticket updated successfully")
         click.echo(f"Status: {ticket.status.value}")
-    except KeyError as e:
-        click.echo(f"Error: not found {e}")
-        sys.exit(1)
+    except KeyError:
+        handle_error(f"ticket '{ticket_id}' not found")
     except ValueError as e:
-        click.echo(f"Error: {e}")
-        sys.exit(1)
+        handle_error(e)
